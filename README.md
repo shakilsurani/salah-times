@@ -111,8 +111,11 @@ Note that Umm Al-Qura sets Isha at a fixed 90 minutes after Maghrib, widening to
 
 - All date and time decisions are made in `Australia/Sydney`, whatever the
   device's own timezone is.
-- After the Isha iqamah passes, the table rolls over to the next day and shows a
-  "Tomorrow" marker, then returns to normal at midnight.
+- As soon as the Isha iqamah passes, the table loads the next day's times so
+  people leaving after Isha see the coming day's schedule. The **date in the
+  header does not change until midnight**, and there is no "tomorrow" marker.
+  One consequence: on a Thursday evening the board shows the Friday schedule —
+  Juma in place of Dhuhr — under a Thursday date.
 - On Fridays the Dhuhr row is replaced in place by Juma 1 and Juma 2, which
   inherit Dhuhr's start time. On other days Juma is listed below Isha for
   reference.

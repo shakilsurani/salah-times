@@ -97,23 +97,6 @@
     flex-wrap: wrap;
   }
 
-  /* Marks the whole table as showing tomorrow, once today's Isha has passed. */
-  .tomorrow-pill {
-    display: inline-flex;
-    align-items: center;
-    gap: .3rem;
-    padding: .15rem .5rem .15rem .4rem;
-    border-radius: 999px;
-    background: var(--accent-soft);
-    color: var(--accent);
-    font-size: .7rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: .06em;
-  }
-
-  .tomorrow-pill svg { width: .95em; height: .95em; fill: currentColor; }
-
   /* Live clock on the left, countdown to the next Iqamah on the right. */
   .strip {
     display: flex;
@@ -799,15 +782,15 @@
   // Returns the next Iqamah and how many seconds away it is. Keyed off the
   // Iqamah time rather than the calculated start - at 1pm Dhuhr has technically
   // begun, but its Iqamah is still ahead, so Dhuhr is what you are waiting on.
-  // When the table is showing tomorrow, every Iqamah on it is upcoming, so the
-  // countdown runs through the rest of tonight and into it.
-  function nextIqamah(rows, isTomorrow, day) {
+  // When the board has moved on to the next day's schedule, every Iqamah on it
+  // is upcoming, so the countdown runs through the rest of tonight and into it.
+  function nextIqamah(rows, isAhead, day) {
     var live = rows.filter(function (row) { return isLive(row, day); });
     live.sort(function (a, b) { return toSeconds(a.iqamah) - toSeconds(b.iqamah); });
 
     var now = sydneySecondsNow();
 
-    if (isTomorrow) {
+    if (isAhead) {
       return {
         row: live[0],
         seconds: (DAY_SECONDS - now) + toSeconds(live[0].iqamah)
@@ -822,13 +805,6 @@
   }
 
   // --- Rendering ------------------------------------------------------------
-
-  var CLOCK_ICON =
-    '<svg viewBox="0 0 24 24" aria-hidden="true">' +
-    '<path d="M21 10.12h-6.78l2.74-2.82c-2.73-2.7-7.15-2.8-9.88-.1-2.73 2.71-2.73 ' +
-    '7.08 0 9.79s7.15 2.71 9.88 0C18.32 15.65 19 14.08 19 12.1h2c0 1.98-.88 ' +
-    '4.55-2.64 6.29-3.51 3.48-9.21 3.48-12.72 0-3.5-3.47-3.53-9.11-.02-12.58s9.14' +
-    '-3.47 12.65 0L21 3v7.12zM12.5 8v4.25l3.5 2.08-.72 1.21L11 13V8h1.5z"/></svg>';
 
   function renderClock() {
     var p = sydneyParts();
@@ -849,13 +825,12 @@
     countdownEl.textContent = formatDuration(next.seconds);
   }
 
-  function renderHeader(day, isTomorrow) {
-    var label = WEEKDAYS[day.wd] + ", " + readableDate(day);
-    var pill = isTomorrow
-      ? '<span class="tomorrow-pill" title="Today\'s prayers have finished - ' +
-        'showing tomorrow">' + CLOCK_ICON + "Tomorrow</span>"
-      : "";
-    datesEl.innerHTML = "<span>" + label + "</span>" + pill;
+  // Always the wall-clock date, never the date of the schedule on screen. Once
+  // the last iqamah has passed the board moves on to the next day's times, but
+  // the date itself is left alone until midnight.
+  function renderHeader(today) {
+    datesEl.innerHTML = "<span>" + WEEKDAYS[today.wd] + ", " +
+      readableDate(today) + "</span>";
   }
 
   function renderSun(timings) {
@@ -947,22 +922,22 @@
   var state = {
     rows: null,        // rows currently on screen
     day: null,         // the day object those rows belong to
-    isTomorrow: false, // true while showing a day that has not started yet
+    isAhead: false,    // true while showing the next day's schedule, pre-midnight
     nextName: null     // highlighted row, tracked to avoid needless redraws
   };
 
-  function show(day, isTomorrow) {
+  function show(day, isAhead) {
     var timings = lookup(day);
     if (!timings) { showOutOfRange(day); return false; }
 
     state.rows = buildRows(timings, day);
     state.day = day;
-    state.isTomorrow = isTomorrow;
+    state.isAhead = isAhead;
 
-    var next = nextIqamah(state.rows, isTomorrow, day);
+    var next = nextIqamah(state.rows, isAhead, day);
     state.nextName = next.row ? next.row.name : null;
 
-    renderHeader(day, isTomorrow);
+    renderHeader(sydneyDay(0));
     renderRows(state.rows, next.row, day);
     renderCountdown(next);
     renderSun(timings);
@@ -994,7 +969,7 @@
 
   function repaint() {
     fillPanel();
-    if (state.day) { show(state.day, state.isTomorrow); }
+    if (state.day) { show(state.day, state.isAhead); }
   }
 
   // Reads the form. Anything unreadable keeps its current value and is named
@@ -1083,28 +1058,34 @@
       return;
     }
 
-    // Midnight has arrived, so the day we were calling "tomorrow" is now today.
-    // Re-show rather than just dropping the pill: crossing into or out of a
-    // Friday changes which rows the table carries.
-    if (state.isTomorrow && dayId(today) === dayId(state.day)) {
-      show(today, false);
-      return;
+    if (state.isAhead) {
+      // Midnight: the schedule already on screen is simply today's now, so all
+      // that changes is the date in the header.
+      if (dayId(today) === dayId(state.day)) {
+        show(today, false);
+        return;
+      }
+      // Asleep, or the clock jumped - the loaded day is no longer tomorrow.
+      if (dayId(sydneyDay(1)) !== dayId(state.day)) {
+        show(today, false);
+        return;
+      }
+    } else {
+      // The device was asleep, or the clock jumped: resync to whatever day it is.
+      if (dayId(today) !== dayId(state.day)) {
+        show(today, false);
+        return;
+      }
+
+      // Today's last iqamah has passed, so load tomorrow's times straight away.
+      // The header keeps today's date until midnight.
+      if (sydneySecondsNow() >= ishaIqamahSeconds(state.rows)) {
+        show(sydneyDay(1), true);
+        return;
+      }
     }
 
-    // The device was asleep, or the clock jumped: resync to whatever day it is.
-    if (!state.isTomorrow && dayId(today) !== dayId(state.day)) {
-      show(today, false);
-      return;
-    }
-
-    // Once today's Isha Iqamah has passed there is nothing left to show for
-    // today, so move the whole table on to tomorrow.
-    if (!state.isTomorrow && sydneySecondsNow() >= ishaIqamahSeconds(state.rows)) {
-      show(sydneyDay(1), true);
-      return;
-    }
-
-    var next = nextIqamah(state.rows, state.isTomorrow, state.day);
+    var next = nextIqamah(state.rows, state.isAhead, state.day);
     renderCountdown(next);
 
     // Only rebuild the table when the highlighted prayer actually changes;
