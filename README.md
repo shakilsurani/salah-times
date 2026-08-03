@@ -39,7 +39,12 @@ chrome.exe --kiosk --app="file:///C:/path/to/index.html"
 Put that in a shortcut in the Startup folder and the screen comes back up by
 itself after a power cut. Add `--noerrdialogs --disable-session-crashed-bubble`
 to suppress the "Chrome didn't shut down correctly" bar. Press `F11` or use the
-**Full screen** button on the page if you'd rather not use kiosk mode.
+full-screen button if you'd rather not use kiosk mode.
+
+Both controls — iqamah times and full screen — are deliberately faint icons in
+the **bottom-left corner**, so they don't compete with the timings. They come up
+to full strength on hover or keyboard focus. The iqamah button hides itself
+entirely in full screen, leaving only the way back out.
 
 **Phone.** Open the hosted URL, then:
 
