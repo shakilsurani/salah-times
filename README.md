@@ -10,6 +10,8 @@ baked into the file — so it runs on a wall-mounted device with no internet.
 | --- | --- |
 | `index.html` | The whole app. Open it directly, or host it. Nothing else is needed at runtime. |
 | `build-times.js` | Regenerates the embedded prayer-time table. The only thing here that uses the internet. |
+| `build-icons.js` | Regenerates the app icons and manifest. Only needed if the icon changes. |
+| `manifest.webmanifest`, `icon-*.png` | Let a hosted copy install to a phone's home screen. Not needed offline. |
 | `AlAdhan-api-1.json` | OpenAPI spec for the AlAdhan API, kept for reference. |
 
 ## Running it
@@ -24,6 +26,31 @@ npx serve
 ```
 
 then browse to `http://<your-ip>:3000`.
+
+## Running it as an app rather than a web page
+
+**Wall display (best result).** Launch Chrome in kiosk mode — no tabs, no
+address bar, nothing to tap out of:
+
+```
+chrome.exe --kiosk --app="file:///C:/path/to/index.html"
+```
+
+Put that in a shortcut in the Startup folder and the screen comes back up by
+itself after a power cut. Add `--noerrdialogs --disable-session-crashed-bubble`
+to suppress the "Chrome didn't shut down correctly" bar. Press `F11` or use the
+**Full screen** button on the page if you'd rather not use kiosk mode.
+
+**Phone.** Open the hosted URL, then:
+
+- **iOS Safari** — Share → *Add to Home Screen*
+- **Android Chrome** — menu → *Add to Home screen* / *Install app*
+
+It launches with no browser chrome and its own icon. This needs the site served
+over `https` (GitHub Pages is fine); it does not work from a `file://` copy.
+
+Layout, scrolling and tap behaviour are already tuned for this: no rubber-band
+overscroll, no tap highlight, and the board itself isn't selectable text.
 
 ## Changing the iqamah times
 

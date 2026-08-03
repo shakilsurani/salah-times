@@ -2,8 +2,21 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Auburn Central Musallah</title>
+
+<!-- Makes "Add to Home Screen" launch without browser chrome. The manifest and
+     icons only exist when this is served from a web host; opening index.html
+     straight off a USB stick simply ignores the missing files. -->
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png" sizes="192x192">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Musallah">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" media="(prefers-color-scheme: light)" content="#f6f7f9">
+<meta name="theme-color" media="(prefers-color-scheme: dark)" content="#14171a">
 <style>
   :root {
     --bg: #f6f7f9;
@@ -35,14 +48,31 @@
 
   * { box-sizing: border-box; }
 
+  /* Nearly every size below is in rem, so the whole board scales by moving
+     this one number - see the large-screen rules at the end. */
+  html { font-size: 16px; }
+
   body {
     margin: 0;
     padding: 2rem 1rem;
     background: var(--bg);
     color: var(--ink);
-    font: 16px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    font: 1rem/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
     display: flex;
     justify-content: center;
+    /* App-like rather than page-like: no rubber-band scroll, no grey flash on
+       tap, and the board itself is not selectable text. */
+    overscroll-behavior: none;
+    -webkit-tap-highlight-color: transparent;
+    -webkit-user-select: none;
+    user-select: none;
+  }
+
+  /* The export block is the one thing that must stay selectable, so it can be
+     copied into the file. */
+  .export {
+    -webkit-user-select: text;
+    user-select: text;
   }
 
   main { width: 100%; max-width: 34rem; }
@@ -217,6 +247,10 @@
   .sun span { white-space: nowrap; }
   .sun .sep { margin: 0 .4rem; opacity: .5; }
 
+  .footer-actions { display: flex; gap: .5rem; }
+
+  .settings-toggle[hidden] { display: none; }
+
   .settings-toggle {
     display: inline-flex;
     align-items: center;
@@ -345,15 +379,46 @@
     font-size: .85em;
   }
 
-  /* Narrow phones: claw back horizontal padding so the three columns fit
-     without wrapping a time onto two lines. */
-  @media (max-width: 380px) {
+  /* Phones. 430px covers the current spread - iPhone SE 375, iPhone 14 390,
+     Pixel 412, Pro Max 430 - so the three columns keep their breathing room
+     without a time wrapping onto two lines. */
+  @media (max-width: 430px) {
     body { padding: 1.25rem .6rem; }
     th, td { padding: .75rem .55rem; }
     h1 { font-size: 1.3rem; }
     .strip .value { font-size: 1.4rem; }
     .ar { margin-left: .3rem; font-size: .95em; }
+    .slash { margin-left: .3rem; }
     .footer-row { flex-direction: column; align-items: stretch; gap: .6rem; }
+    .sun { text-align: left; }
+  }
+
+  /* Really narrow, or a phone in split view. */
+  @media (max-width: 340px) {
+    th, td { padding: .7rem .4rem; }
+    .ar { display: none; }
+  }
+
+  /* Wall displays. Everything is in rem, so raising the root size scales the
+     whole board together rather than leaving small text in a big frame. */
+  @media (min-width: 1000px) and (min-height: 600px) {
+    html { font-size: 20px; }
+    main { max-width: 38rem; }
+  }
+
+  @media (min-width: 1500px) and (min-height: 800px) {
+    html { font-size: 26px; }
+    main { max-width: 42rem; }
+  }
+
+  @media (min-width: 2000px) and (min-height: 1100px) {
+    html { font-size: 34px; }
+  }
+
+  /* A landscape screen is short on height - keep the board from overflowing. */
+  @media (min-width: 1000px) and (orientation: landscape) and (max-height: 700px) {
+    body { padding: 1rem; }
+    html { font-size: 17px; }
   }
 </style>
 </head>
@@ -389,6 +454,7 @@
   </div>
 
   <div class="footer-row">
+    <div class="footer-actions">
     <button type="button" class="settings-toggle" id="settings-toggle"
             aria-expanded="false" aria-controls="panel">
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19.14 12.94c.04-.3.06-.61.06-.94
@@ -401,6 +467,13 @@
         15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg>
       Iqamah times
     </button>
+    <button type="button" class="settings-toggle" id="fullscreen-toggle"
+            title="Full screen" hidden>
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12
+        7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/></svg>
+      <span id="fullscreen-label">Full screen</span>
+    </button>
+    </div>
     <div class="sun" id="sun" hidden></div>
   </div>
 
@@ -1042,6 +1115,46 @@
       renderRows(state.rows, next.row, state.day);
     }
   }
+
+  // --- Full screen ----------------------------------------------------------
+  // The wall display wants no browser chrome at all. iPhone Safari has no
+  // Fullscreen API, so the button hides itself there and "Add to Home Screen"
+  // is the route instead.
+
+  (function () {
+    var btn = document.getElementById("fullscreen-toggle");
+    var label = document.getElementById("fullscreen-label");
+    var root = document.documentElement || {};
+    var request = root.requestFullscreen || root.webkitRequestFullscreen;
+    if (!btn || !request) { return; }
+
+    btn.hidden = false;
+
+    function active() {
+      return document.fullscreenElement || document.webkitFullscreenElement;
+    }
+
+    function sync() {
+      var on = !!active();
+      if (label) { label.textContent = on ? "Exit full screen" : "Full screen"; }
+      btn.setAttribute("title", on ? "Exit full screen" : "Full screen");
+    }
+
+    btn.addEventListener("click", function () {
+      if (active()) {
+        var exit = document.exitFullscreen || document.webkitExitFullscreen;
+        if (exit) { exit.call(document); }
+      } else {
+        request.call(root);
+      }
+    });
+
+    if (document.addEventListener) {
+      document.addEventListener("fullscreenchange", sync);
+      document.addEventListener("webkitfullscreenchange", sync);
+    }
+    sync();
+  }());
 
   settings = withDefaults();
   fillPanel();
