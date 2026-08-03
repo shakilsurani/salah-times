@@ -1,0 +1,104 @@
+# Auburn Central Musallah — prayer times
+
+A single self-contained HTML page showing daily salah and iqamah times for
+Auburn, NSW. It makes **no network requests** — ten years of prayer times are
+baked into the file — so it runs on a wall-mounted device with no internet.
+
+## Files
+
+| File | Purpose |
+| --- | --- |
+| `index.html` | The whole app. Open it directly, or host it. Nothing else is needed at runtime. |
+| `build-times.js` | Regenerates the embedded prayer-time table. The only thing here that uses the internet. |
+| `AlAdhan-api-1.json` | OpenAPI spec for the AlAdhan API, kept for reference. |
+
+## Running it
+
+Open `index.html` in any browser — including straight off a USB stick via
+`file://`. No server required.
+
+To view it on a phone on the same wifi:
+
+```
+npx serve
+```
+
+then browse to `http://<your-ip>:3000`.
+
+## Changing the iqamah times
+
+Iqamah times always come from the `DEFAULTS` block near the top of the `<script>`
+in `index.html`. Nothing is stored on the device, so every device that opens the
+file shows the same times.
+
+```js
+var DEFAULTS = {
+  Fajr: "06:10",
+  Dhuhr: "13:30",
+  Asr: "16:15",
+  Isha: "19:20",
+  juma1: "12:45",
+  juma2: "13:50",
+  maghribOffset: 7   // minutes after the calculated Maghrib
+};
+```
+
+Edit it directly, or use the **Iqamah times** panel on the page to try values
+out and press **Copy block for index.html** to get the block back with your
+changes. Panel edits are a preview only — they disappear on reload until pasted
+into the file.
+
+Maghrib is deliberately an offset rather than a fixed time, so it keeps tracking
+sunset through the year.
+
+> **Known limitation:** the four fixed times do not follow the seasons. In
+> January, Asr starts around 6:03 pm and Isha around 9:40 pm, so an Asr iqamah
+> of 4:15 pm and an Isha of 7:20 pm fall before the prayer has begun. They need
+> adjusting seasonally, or converting to offsets like Maghrib.
+
+## Regenerating the prayer times
+
+The embedded table currently covers **2026–2035**. The page warns on screen for
+the last 120 days of data, and refuses to show a date outside the range rather
+than displaying something wrong.
+
+On a machine with internet:
+
+```
+node build-times.js 2026 2035
+```
+
+This rewrites the generated block inside `index.html` in place. It needs Node 18
+or newer (it uses the built-in `fetch`); there are no dependencies to install.
+
+Times come from [AlAdhan](https://aladhan.com) using:
+
+- **method 4** — Umm Al-Qura University, Makkah
+- **school 1** — Hanafi (affects Asr only)
+- city `Auburn`, state `NSW`, country `AU`
+
+Note that Umm Al-Qura sets Isha at a fixed 90 minutes after Maghrib, widening to
+120 minutes during Ramadan, rather than using a twilight angle.
+
+## Behaviour worth knowing
+
+- All date and time decisions are made in `Australia/Sydney`, whatever the
+  device's own timezone is.
+- After the Isha iqamah passes, the table rolls over to the next day and shows a
+  "Tomorrow" marker, then returns to normal at midnight.
+- On Fridays the Dhuhr row is replaced in place by Juma 1 and Juma 2, which
+  inherit Dhuhr's start time. On other days Juma is listed below Isha for
+  reference.
+- The countdown targets the **iqamah** time, not the calculated start.
+
+## Deploying
+
+**Offline device:** copy `index.html` across. That's the whole deployment.
+
+**Sharing a link:** any static host works. For GitHub Pages, push this repo,
+then Settings → Pages → Deploy from a branch → `main` → `/ (root)`. Because the
+file is named `index.html` it becomes the site root.
+
+The device's clock is the one thing the page cannot check. With no internet
+there is no NTP, so it should be set from a local time source or by hand
+periodically — a display that is silently a few minutes fast is worse than none.
