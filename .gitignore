@@ -1,2 +1,8 @@
 # Claude Code local settings - contains machine-specific paths and usernames
 .claude/settings.local.json
+
+# Layout previews - local only, not part of the app
+preview/
+
+# Screenshots and scratch testing
+Testing/
