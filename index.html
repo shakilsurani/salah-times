@@ -845,35 +845,30 @@
     return rows;
   }
 
-  function ishaIqamahSeconds(rows) {
-    var isha = rows.filter(function (r) { return r.name === "Isha"; })[0];
-    return toSeconds(isha.iqamah);
-  }
-
   // Returns the next Iqamah and how many seconds away it is. Keyed off the
   // Iqamah time rather than the calculated start - at 1pm Dhuhr has technically
   // begun, but its Iqamah is still ahead, so Dhuhr is what you are waiting on.
-  // When the board has moved on to the next day's schedule, every Iqamah on it
-  // is upcoming, so the countdown runs through the rest of tonight and into it.
-  function nextIqamah(rows, isAhead) {
+  //
+  // Once the last one has passed, the next is the first of tomorrow. The board
+  // itself does not change until midnight, and it does not need to: Iqamah
+  // times are fixed in DEFAULTS, so tomorrow's first one is at the same clock
+  // time as today's.
+  function nextIqamah(rows) {
     var live = rows.slice().sort(function (a, b) {
       return toSeconds(a.iqamah) - toSeconds(b.iqamah);
     });
 
     var now = sydneySecondsNow();
 
-    if (isAhead) {
-      return {
-        row: live[0],
-        seconds: (DAY_SECONDS - now) + toSeconds(live[0].iqamah)
-      };
-    }
-
     for (var i = 0; i < live.length; i++) {
       var at = toSeconds(live[i].iqamah);
       if (at > now) { return { row: live[i], seconds: at - now }; }
     }
-    return { row: null, seconds: null };
+
+    return {
+      row: live[0],
+      seconds: (DAY_SECONDS - now) + toSeconds(live[0].iqamah)
+    };
   }
 
   // --- Rendering ------------------------------------------------------------
@@ -1064,23 +1059,21 @@
 
   var state = {
     rows: null,        // rows currently on screen
-    day: null,         // the day object those rows belong to
-    isAhead: false,    // true while showing the next day's schedule, pre-midnight
+    day: null,         // the day those rows belong to - always the current date
     nextName: null     // highlighted row, tracked to avoid needless redraws
   };
 
-  function show(day, isAhead) {
+  function show(day) {
     var timings = lookup(day);
     if (!timings) { showOutOfRange(day); return false; }
 
     state.rows = buildRows(timings, day);
     state.day = day;
-    state.isAhead = isAhead;
 
-    var next = nextIqamah(state.rows, isAhead);
+    var next = nextIqamah(state.rows);
     state.nextName = next.row ? next.row.name : null;
 
-    renderHeader(sydneyDay(0));
+    renderHeader(day);
     renderRows(state.rows, next.row);
     renderJumaCard(day.wd === FRIDAY);
     renderCountdown(next);
@@ -1113,7 +1106,7 @@
 
   function repaint() {
     fillPanel();
-    if (state.day) { show(state.day, state.isAhead); }
+    if (state.day) { show(state.day); }
   }
 
   // Reads the form. Anything unreadable keeps its current value and is named
@@ -1194,39 +1187,15 @@
     var today = sydneyDay(0);
     renderExpiryNote(today);
 
-    if (!state.rows) {
-      show(today, false);
+    // The whole board belongs to one day and changes only when the date does -
+    // at midnight, or whenever the clock jumps because the device was asleep.
+    // Between those, only the clock, the countdown and the highlighted row move.
+    if (!state.rows || dayId(today) !== dayId(state.day)) {
+      show(today);
       return;
     }
 
-    if (state.isAhead) {
-      // Midnight: the schedule already on screen is simply today's now, so all
-      // that changes is the date in the header.
-      if (dayId(today) === dayId(state.day)) {
-        show(today, false);
-        return;
-      }
-      // Asleep, or the clock jumped - the loaded day is no longer tomorrow.
-      if (dayId(sydneyDay(1)) !== dayId(state.day)) {
-        show(today, false);
-        return;
-      }
-    } else {
-      // The device was asleep, or the clock jumped: resync to whatever day it is.
-      if (dayId(today) !== dayId(state.day)) {
-        show(today, false);
-        return;
-      }
-
-      // Today's last iqamah has passed, so load tomorrow's times straight away.
-      // The header keeps today's date until midnight.
-      if (sydneySecondsNow() >= ishaIqamahSeconds(state.rows)) {
-        show(sydneyDay(1), true);
-        return;
-      }
-    }
-
-    var next = nextIqamah(state.rows, state.isAhead);
+    var next = nextIqamah(state.rows);
     renderCountdown(next);
 
     // Only rebuild the table when the highlighted prayer actually changes;
