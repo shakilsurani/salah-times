@@ -70,13 +70,6 @@
     user-select: none;
   }
 
-  /* The export block is the one thing that must stay selectable, so it can be
-     copied into the file. */
-  .export {
-    -webkit-user-select: text;
-    user-select: text;
-  }
-
   main { width: 100%; max-width: 34rem; }
 
   header { margin-bottom: 1.25rem; }
@@ -336,15 +329,41 @@
     background: var(--card);
   }
 
-  .panel[hidden], .note[hidden], .sun[hidden], .export[hidden] { display: none; }
+  .panel[hidden], .note[hidden], .sun[hidden] { display: none; }
+
+  .panel-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: .8rem;
+  }
 
   .panel h2 {
-    margin: 0 0 .8rem;
+    margin: 0;
     font-size: .7rem;
     text-transform: uppercase;
     letter-spacing: .08em;
     color: var(--muted);
   }
+
+  .panel-close {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.8rem;
+    height: 1.8rem;
+    padding: 0;
+    border: 1px solid var(--line);
+    border-radius: 7px;
+    background: none;
+    color: var(--muted);
+    cursor: pointer;
+    flex: none;
+  }
+
+  .panel-close:hover { color: var(--ink); border-color: var(--muted); }
+  .panel-close svg { width: 1em; height: 1em; fill: currentColor; }
 
   .fields {
     display: grid;
@@ -394,20 +413,6 @@
 
   .panel-actions .ghost { background: none; color: var(--muted); }
   .panel-actions .ghost:hover { color: var(--ink); }
-
-  .export {
-    width: 100%;
-    margin-top: .8rem;
-    padding: .6rem;
-    border: 1px solid var(--line);
-    border-radius: 8px;
-    background: var(--bg);
-    color: var(--ink);
-    font-family: ui-monospace, "Cascadia Mono", Consolas, monospace;
-    font-size: .75rem;
-    line-height: 1.5;
-    resize: vertical;
-  }
 
   .panel-msg { margin: .7rem 0 0; font-size: .72rem; color: var(--muted); }
   .panel-msg.saved { color: var(--accent); font-weight: 600; }
@@ -545,7 +550,15 @@
   </div>
 
   <div class="panel" id="panel" hidden>
-    <h2>Iqamah times</h2>
+    <div class="panel-head">
+      <h2>Iqamah times</h2>
+      <button type="button" class="panel-close" id="btn-close"
+              aria-label="Close" title="Close">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 6.41 17.59 5 12
+          10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19
+          17.59 13.41 12z"/></svg>
+      </button>
+    </div>
     <div class="fields">
       <div class="field">
         <label for="in-Fajr">Fajr</label>
@@ -577,13 +590,11 @@
       </div>
     </div>
     <div class="panel-actions">
-      <button type="button" class="primary" id="btn-export">Copy block for index.html</button>
       <button type="button" class="ghost" id="btn-reset">Reset</button>
     </div>
-    <textarea class="export" id="export" rows="10" readonly hidden></textarea>
     <p class="panel-msg" id="panel-msg">
-      Changes here preview on the page only. Iqamah times always come from
-      index.html &mdash; copy the block into the file to keep them.
+      Changes here preview on this screen only. To set the times for good, edit
+      the DEFAULTS block near the top of index.html.
     </p>
   </div>
 
@@ -671,7 +682,6 @@
   var jumaCardEl = document.getElementById("juma-card");
   var panelEl = document.getElementById("panel");
   var panelMsgEl = document.getElementById("panel-msg");
-  var exportEl = document.getElementById("export");
   var toggleEl = document.getElementById("settings-toggle");
 
   // --- Settings -------------------------------------------------------------
@@ -687,19 +697,6 @@
     var out = {};
     Object.keys(DEFAULTS).forEach(function (k) { out[k] = DEFAULTS[k]; });
     return out;
-  }
-
-  // The block to paste into this file, which is the only way a change sticks.
-  function exportBlock(current) {
-    return "  var DEFAULTS = {\n" +
-      '    Fajr: "' + current.Fajr + '",\n' +
-      '    Dhuhr: "' + current.Dhuhr + '",\n' +
-      '    Asr: "' + current.Asr + '",\n' +
-      '    Isha: "' + current.Isha + '",\n' +
-      '    juma1: "' + current.juma1 + '",\n' +
-      '    juma2: "' + current.juma2 + '",\n' +
-      "    maghribOffset: " + current.maghribOffset + "\n" +
-      "  };";
   }
 
   // --- Sydney-local time helpers -------------------------------------------
@@ -1149,36 +1146,25 @@
       var read = readPanel();
       settings = read.values;
       repaint();
-      exportEl.hidden = true;
       message(read.bad.length
         ? "Could not read: " + read.bad.join(", ") + ". Left unchanged."
-        : "Previewing. Copy the block into index.html to keep these times.",
+        : "Previewing. Edit DEFAULTS in index.html to keep these times.",
         read.bad.length ? "problem" : null);
     });
   });
 
-  document.getElementById("btn-export").addEventListener("click", function () {
-    var read = readPanel();
-    settings = read.values;
-    repaint();
-
-    exportEl.hidden = false;
-    exportEl.value = exportBlock(settings);
-    exportEl.focus();
-    exportEl.select();
-    message(read.bad.length
-      ? "Could not read: " + read.bad.join(", ") + ". The block below uses the " +
-        "previous values for those."
-      : "Replace the DEFAULTS block in index.html with this, then copy the " +
-        "file to every device.", read.bad.length ? "problem" : null);
-  });
-
   document.getElementById("btn-reset").addEventListener("click", function () {
     settings = withDefaults();
-    exportEl.hidden = true;
     repaint();
     message("Back to the times set in index.html.", "saved");
   });
+
+  function closePanel() {
+    panelEl.hidden = true;
+    toggleEl.setAttribute("aria-expanded", "false");
+  }
+
+  document.getElementById("btn-close").addEventListener("click", closePanel);
 
   toggleEl.addEventListener("click", function () {
     var open = panelEl.hidden;
@@ -1186,11 +1172,19 @@
     toggleEl.setAttribute("aria-expanded", String(open));
     if (open) {
       fillPanel();
-      exportEl.hidden = true;
-      message("Changes here preview on the page only. Iqamah times always come " +
-        "from index.html — copy the block into the file to keep them.");
+      message("Changes here preview on this screen only. To set the times for " +
+        "good, edit the DEFAULTS block near the top of index.html.");
     }
   });
+
+  // Escape closes it too - the panel covers the board while it is open.
+  if (document.addEventListener) {
+    document.addEventListener("keydown", function (e) {
+      if (!panelEl.hidden && (e.key === "Escape" || e.keyCode === 27)) {
+        closePanel();
+      }
+    });
+  }
 
   // --- Tick -----------------------------------------------------------------
 

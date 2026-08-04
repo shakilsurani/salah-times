@@ -75,10 +75,9 @@ var DEFAULTS = {
 };
 ```
 
-Edit it directly, or use the **Iqamah times** panel on the page to try values
-out and press **Copy block for index.html** to get the block back with your
-changes. Panel edits are a preview only — they disappear on reload until pasted
-into the file.
+Edit it directly. The **Iqamah times** panel on the page is for trying values
+out and seeing them on the board — those edits are a preview only and disappear
+on reload, so the file is the only thing that makes a change stick.
 
 Maghrib is deliberately an offset rather than a fixed time, so it keeps tracking
 sunset through the year.
