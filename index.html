@@ -467,7 +467,8 @@
      Height is the binding constraint, because the board must never scroll. The
      content is roughly 40rem tall, so ~2vh per rem fills the screen with a
      little room to spare; the small vw term lets very wide screens gain a bit
-     more. */
+     more.
+
      The inner min() caps the vw contribution: without it an ultrawide screen
      (short but very wide) would size the board taller than its own viewport. */
   @media (min-width: 900px) {
