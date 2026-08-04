@@ -149,12 +149,10 @@
     border-bottom: 1px solid var(--line);
   }
 
-  /* Headers run left; the times themselves stay right-aligned so their digits
-     line up down the column. */
-  thead th { text-align: left; }
-  tbody td:not(:first-child) { text-align: right; }
+  /* Everything runs left - headers and values alike - so each label sits
+     directly above the times it names. (th/td already default to left above.)
 
-  /* Equal widths for the two time columns, so the header row reads as a pair
+     Equal widths for the two time columns, so the header row reads as a pair
      rather than one wide column and one narrow one. */
   thead th:nth-child(2), thead th:nth-child(3) { width: 26%; }
 
