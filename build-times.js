@@ -17,7 +17,17 @@
 const fs = require("fs");
 const path = require("path");
 
-const CITY_QUERY = "city=Auburn&state=NSW&country=AU&method=4&school=1";
+// Prayer start times are rounded up by a minute so the board is never earlier
+// than the true time - praying before the time enters is the unsafe direction,
+// and it matches what other local apps show. Sunrise stays untouched: rounding
+// it up would overstate how long Fajr lasts. Sunset moves with Maghrib so the
+// two never disagree on screen.
+//
+//   Imsak,Fajr,Sunrise,Dhuhr,Asr,Maghrib,Sunset,Isha,Midnight
+const TUNE = "0,1,0,1,1,1,1,1,0";
+
+const CITY_QUERY =
+  "city=Auburn&state=NSW&country=AU&method=4&school=1&tune=" + TUNE;
 
 // Order matters: the page decodes the packed string using this same order.
 const KEYS = ["Fajr", "Sunrise", "Dhuhr", "Asr", "Maghrib", "Sunset", "Isha"];

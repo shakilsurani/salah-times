@@ -108,6 +108,11 @@ Times come from [AlAdhan](https://aladhan.com) using:
 - **method 4** — Umm Al-Qura University, Makkah
 - **school 1** — Hanafi (affects Asr only)
 - city `Auburn`, state `NSW`, country `AU`
+- `tune=0,1,0,1,1,1,1,1,0` — the five prayer starts are rounded up by a minute
+  so the board is never *earlier* than the true time, which is the unsafe
+  direction. Sunrise is left alone, since rounding it up would overstate how
+  long Fajr lasts. Sunset moves with Maghrib so the two always agree on screen.
+  This also brings the times into line with local apps such as Go Pray.
 
 Note that Umm Al-Qura sets Isha at a fixed 90 minutes after Maghrib, widening to
 120 minutes during Ramadan, rather than using a twilight angle.
@@ -122,8 +127,9 @@ Note that Umm Al-Qura sets Isha at a fixed 90 minutes after Maghrib, widening to
   One consequence: on a Thursday evening the board shows the Friday schedule —
   Juma in place of Dhuhr — under a Thursday date.
 - On Fridays the Dhuhr row is replaced in place by Juma 1 and Juma 2, which
-  inherit Dhuhr's start time. On other days Juma is listed below Isha for
-  reference.
+  inherit Dhuhr's start time. On other days Juma leaves the table entirely and
+  appears in a standing panel beneath it, so every row in the table is always
+  a live one.
 - The countdown targets the **iqamah** time, not the calculated start.
 
 ## Deploying
