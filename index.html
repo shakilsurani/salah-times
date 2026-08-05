@@ -30,6 +30,10 @@
     --warn-soft: #fdf3e0;
     --error: #c0392b;
     --sun: #c2761a;
+    /* Tracking on the small uppercase labels - column headers and the two
+       labels above them. It is a token because the right-hand padding of a
+       right-aligned header has to subtract exactly this much - see thead th. */
+    --label-track: .16em;
   }
 
   @media (prefers-color-scheme: dark) {
@@ -107,7 +111,7 @@
     font-size: .65rem;
     font-weight: 600;
     text-transform: uppercase;
-    letter-spacing: .08em;
+    letter-spacing: var(--label-track);
     color: var(--muted);
   }
 
@@ -143,7 +147,7 @@
   thead th {
     font-size: .7rem;
     text-transform: uppercase;
-    letter-spacing: .08em;
+    letter-spacing: var(--label-track);
     color: var(--muted);
     font-weight: 600;
     border-bottom: 1px solid var(--line);
@@ -157,7 +161,7 @@
 
   /* letter-spacing adds a trailing space after the final glyph, which leaves a
      right-aligned label sitting a hair left of the numbers beneath it. */
-  thead th:not(:first-child) { padding-right: calc(1rem - .08em); }
+  thead th:not(:first-child) { padding-right: calc(1rem - var(--label-track)); }
 
   tbody tr + tr td { border-top: 1px solid var(--line); }
 
@@ -450,7 +454,7 @@
   @media (max-width: 430px) {
     body { padding: 1.25rem .6rem; }
     th, td { padding: .75rem .55rem; }
-    thead th:not(:first-child) { padding-right: calc(.55rem - .08em); }
+    thead th:not(:first-child) { padding-right: calc(.55rem - var(--label-track)); }
     h1 { font-size: 1.3rem; }
     .strip .value { font-size: 1.4rem; }
     .ar { margin-left: .3rem; font-size: .95em; }
@@ -519,7 +523,7 @@
       <thead>
         <tr>
           <th scope="col">Salah</th>
-          <th scope="col">Start</th>
+          <th scope="col">Starts</th>
           <th scope="col">Iqamah</th>
         </tr>
       </thead>
